@@ -100,7 +100,7 @@ switch CLS
 
 
     case 'n' 
-     disp(noisy perch)
+     disp('noisy perch')
      imgLoc=fullfile(rootdir,'noisy'); 
      imFileName=['n_', basename,'.jpg'];
 
