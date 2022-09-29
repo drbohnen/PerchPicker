@@ -4,8 +4,10 @@
 % perch picker v.1 
 % 25 Aug 22 
 
+clear
+
 %% Load the scalogram images as a datastore, folder name  = labels 
-imds = imageDatastore('../perchtraining', 'LabelSource', 'foldernames', 'IncludeSubfolders',true);
+imds = imageDatastore('newtraining', 'LabelSource', 'foldernames', 'IncludeSubfolders',true);
 imds=shuffle(imds);  % mix the up 
 tbl = countEachLabel(imds)
 
@@ -15,13 +17,13 @@ perch = find(imds.Labels == 'perch');other = find(imds.Labels == 'other');
 nP=table2array(tbl(2,2));
 nO=table2array(tbl(1,2));
 figure
-for i=1:9 
-subplot(3,3,i); imshow(readimage(imds,perch(randi(nP,1)))); title('perch example')
+for i=1:12 
+subplot(4,3,i); imshow(readimage(imds,perch(randi(nP,1)))); title('perch example')
 end
 
 figure
-for i=1:9 
-subplot(3,3,i); imshow(readimage(imds,other(randi(nO,1)))); title('other example')
+for i=1:12 
+subplot(4,3,i); imshow(readimage(imds,other(randi(nO,1)))); title('other example')
 end
 
 
@@ -33,7 +35,7 @@ imds = splitEachLabel(imds, minSetCount, 'randomize');
 net = resnet50();
 
 %Prepare Training and Test Image Sets
-[trainingSet, testSet] = splitEachLabel(imds, 0.6, 'randomize');
+[trainingSet, testSet] = splitEachLabel(imds, 0.7, 'randomize');
 
 
 % Get Training Features 
@@ -46,8 +48,22 @@ trainingFeatures = activations(net,trainingSet, featureLayer, ...
 trainingLabels = trainingSet.Labels;
 
 
-% Define classifier options and trains the classifier.
-classifier = fitcsvm(...
+% % Define classifier options and trains the classifier.
+% classifier1 = fitcsvm(...
+%     trainingFeatures', ...
+%     trainingLabels, ...
+%     'KernelFunction', 'polynomial', ...
+%     'PolynomialOrder', 3, ...
+%     'KernelScale', 'auto', ...
+%     'BoxConstraint', 1, ...
+%     'Standardize', true, ...
+%     'ClassNames', categorical({'other'; 'perch'})); 
+
+
+
+
+% WEIGHTED COST FUNCTION Define classifier options and trains the classifier.
+classifier1 = fitcsvm(...
     trainingFeatures', ...
     trainingLabels, ...
     'KernelFunction', 'polynomial', ...
@@ -55,11 +71,20 @@ classifier = fitcsvm(...
     'KernelScale', 'auto', ...
     'BoxConstraint', 1, ...
     'Standardize', true, ...
-    'ClassNames', categorical({'other'; 'perch'})); 
+    'Cost',[0 1;1 0],...
+    'ClassNames', categorical({'other'; 'perch'}))
 
+
+
+
+
+
+
+
+classifier = fitSVMPosterior(classifier1);  % estimate posterior probability from scores 
 
 %%  apply to training data 
-predictedLabels = predict(classifier, trainingFeatures, 'ObservationsIn', 'columns');
+[predictedLabels,TrainingScores] = predict(classifier, trainingFeatures, 'ObservationsIn', 'columns');
 
 % Get the known labels
 traiingLabels = trainingSet.Labels;
@@ -70,6 +95,29 @@ confMat = confusionmat(traiingLabels, predictedLabels);
 disp('results for training data')
 % Convert confusion matrix into percentage form
 confMat = bsxfun(@rdivide,confMat,sum(confMat,2))
+% 
+
+
+%% calculate k-folds cross model 
+disp('K-fold Cross Validation Class Loss')
+CVSVMModel = crossval(classifier1);
+classLoss = kfoldLoss(CVSVMModel)
+
+classifier2 = fitcsvm(...
+    trainingFeatures', ...
+    trainingLabels, ...
+    'KernelFunction', 'polynomial', ...
+    'PolynomialOrder', 3, ...
+    'KernelScale', 'auto', ...
+    'BoxConstraint', 1, ...
+    'Standardize', true, ...
+    'KFold',10,...
+    'ClassNames', categorical({'other'; 'perch'})); 
+
+predictionkfold = kfoldPredict(classifier2);
+confMat = confusionmat(traiingLabels, predictionkfold);
+confMat = bsxfun(@rdivide,confMat,sum(confMat,2))
+
 
 
 %%  apply to test data set 
@@ -78,7 +126,7 @@ testFeatures = activations(net, testSet, featureLayer, ...
     'MiniBatchSize', 32, 'OutputAs', 'columns');
 
 % Pass CNN image features to trained classifier
-predictedLabels = predict(classifier, testFeatures, 'ObservationsIn', 'columns');
+[predictedLabels,predictedScores]= predict(classifier, testFeatures, 'ObservationsIn', 'columns');
 
 % Get the known labels
 testLabels = testSet.Labels;
@@ -90,7 +138,11 @@ disp('results for test data')
 % Convert confusion matrix into percentage form
 confMat = bsxfun(@rdivide,confMat,sum(confMat,2))
 
-
+figure; 
+cm=confusionchart(testLabels, predictedLabels)
+cm.ColumnSummary = 'column-normalized';
+cm.RowSummary = 'row-normalized';
+cm.Title = 'Test Data Confusion Matrix'
 
 
 
