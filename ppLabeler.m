@@ -1,23 +1,28 @@
 function ppLabeler(v24,station, filename, starttime, rootdir) 
-% 
 % Function will let you assign labels to detected calls 
 % and save labeled scalograms in subfolders 'perch', 'other', noisy' 
 % 
 % ppLabel(v24, station, filename, starttime, rootdirectory) 
 %
 % INPUTS
-%   v24 is 24kHz sampled waveform; pressure corrected  
-%   station = e.g.,   'C2'
+%   v24 = 24kHz sampled waveform; pressure corrected, unfiltered 
+%           (e.g., 2 min record) 
+%   station = e.g.,'C2'
 %   fname = file name, e.g., '1074286637.190619031500.wav' used in file name
 %   starttime = start time of vector, e.g., [yyyy,mm,dd,hh,MM,ss] 
 %   rootdir = where to store the labeled folders 
 %
 % HOW TO USE 
-% y=audioread('1074286637.190619040000.wav');
-% y=resample(y,1,2);  % assume original 48kHz 
-% gain = 169; % typical for ST instrument 
-% y=(y-mean(y))*(10^(gain/20));  % for soundtrap instrument
-% ppLabeler(y,'S1','1074286637.190619040000.wav',[2019,06,19,04,00,00],'/Volumes/G6/d_CultchTimeSeries/PP')
+%   y=audioread('1074286637.190619040000.wav');
+%   y=resample(y,1,2);  % assume original 48kHz 
+%   gain = 169; % typical for ST instrument 
+%   y=(y-mean(y))*(10^(gain/20));  % for soundtrap instrument
+%   ppLabeler(y,'S1','1074286637.190619040000.wav',[2019,06,19,04,00,00],'/Volumes/G6/d_CultchTimeSeries/PP')
+%
+% To generate detection for review, the function calls
+% >> ppKSpicker(v24f,2,10), where v24f is a 2000-35000 Hz bandpass 
+%    dKthres= 2 and SNRthres - 10 dB. 
+%
 %
 % AUTHORS: 
 % D. Bohnenstiehl (NCSU) 
@@ -30,8 +35,8 @@ fs=24000;
 
 %% plot the data 
   np2=12; W=2^np2; 
-  lL=2000; uL=3750; % filters 
-     v24f=bandpass(v24,[lL, uL],fs,'Steepness',0.95); 
+  lL=2000; uL=3500; % filters 
+      v24f=bandpass_del(v24,lL,uL,fs,4); 
 
      [~,F,T,Pxx]=spectrogram(v24,W,floor(W*.85),2^np2,fs); 
      PxxMod=10*log10(Pxx); 
@@ -51,6 +56,9 @@ fs=24000;
 
  %% run the detector 
   [events] = ppKSpicker(v24f,2,10); 
+
+  events(events+0.03*fs >= length(v24))=length(v24)-0.03*fs;  % make sure window does go past end of the file 
+
   etimes = events/fs; 
   fprintf('The number of picks found in this file is %1.0f\n', length(events)) 
  

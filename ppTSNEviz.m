@@ -1,3 +1,11 @@
+% Script will calculate layer activations and generate TSNE ordination
+% of labeled data for visualizing class seperation  
+%
+% AUTHORS: 
+% D. Bohnenstiehl (NCSU) 
+% perch picker v.1 
+% 24 Aug 22 
+
 imds = imageDatastore('newtraining', 'LabelSource', 'foldernames', 'IncludeSubfolders',true);
 
 net = resnet50();
