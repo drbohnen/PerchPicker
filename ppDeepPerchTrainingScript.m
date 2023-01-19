@@ -76,10 +76,10 @@ classifier = fitSVMPosterior(classifier1);  % estimate posterior probability fro
 [predictedLabels,TrainingScores] = predict(classifier, trainingFeatures, 'ObservationsIn', 'columns');
 
 % Get the known labels
-traiingLabels = trainingSet.Labels;
+trainingLabels = trainingSet.Labels;
 
 % Tabulate the results using a confusion matrix.
-confMat = confusionmat(traiingLabels, predictedLabels);
+confMat = confusionmat(trainingLabels, predictedLabels);
 
 disp('results for training data')
 % Convert confusion matrix into percentage form
@@ -102,7 +102,7 @@ classifier2 = fitcsvm(...
     'ClassNames', categorical({'other'; 'perch'})); 
 
 predictionkfold = kfoldPredict(classifier2);
-confMat = confusionmat(traiingLabels, predictionkfold);
+confMat = confusionmat(trainingLabels, predictionkfold);
 confMat = bsxfun(@rdivide,confMat,sum(confMat,2))
 
 
