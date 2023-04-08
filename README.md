@@ -1,7 +1,7 @@
 # PerchPicker
 MATLAB software to identify American silver perch calls in passive acoustic data using deep learning. 
 
-Bohnenstiehl, D.R., in prep 2023, Automated cataloging of American silver perch (Bairdiella chrysoura) calls using machine learning
+Bohnenstiehl, D.R. 2023, Automated cataloguing of American silver perch (Bairdiella chrysoura) calls using machine learning, https://doi.org/10.1080/09524622.2023.2197863
 
 perch_classifier_v7.mat = classifier from above paper, trained on 12,000 labeled signals from data in western Pamlico Sound, NC.  This is the recommended classifier 
 
